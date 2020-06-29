@@ -1,0 +1,12 @@
+.table td,
+.table th {
+    text-align: center;
+}
+
+.table th {
+    font-size: 15px;
+}
+
+.tableSubheader {
+    font-size: 10px !important;
+}

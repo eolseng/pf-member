@@ -27,8 +27,11 @@ function Navbar() {
                     buttonText={'TU Medlemskap'}
                     endpoint={'/download/tu'}/>
                 <FileDownloader
-                    buttonText={'CRM Errors'}
+                    buttonText={'CRM Feil'}
                     endpoint={'/download/member-error'}/>
+                <FileDownloader
+                    buttonText={'Repeterende Faktura Feil'}
+                    endpoint={'/download/repeating-invoice-error'}/>
             </div>
         </li>
 

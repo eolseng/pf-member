@@ -9,7 +9,7 @@ import java.time.LocalDate
 
 @Service
 class CrmReportService(
-        private val errorService: MemberErrorService
+        private val errorService: ErrorService
 ) {
 
     fun parse(inputStream: InputStream): List<Member> {
@@ -92,7 +92,7 @@ class CrmReportService(
 
         // A member must have 'Polyteknisk Forening' or 'PF Petroleum og fornybar'
         if (!member.value.any { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }) {
-            errorService.createError(
+            errorService.createMemberError(
                     member.key,
                     "Kunde har ikke 'Polyteknisk Forening' eller 'PF Petroleum og fornybar'"
             )
@@ -100,7 +100,7 @@ class CrmReportService(
 
         // A member should not have both 'Polyteknisk Forening' and 'PF Petroleum og fornybar'
         if (member.value.filter { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }.size > 1) {
-            errorService.createError(
+            errorService.createMemberError(
                     member.key,
                     "Kunde har både 'Polyteknisk Forening' og 'PF Petroleum og fornybar'"
             )
@@ -109,7 +109,7 @@ class CrmReportService(
         // A member should not have multiple "Membership Tiers" checked
         member.value.forEach {
             if (it.ordinaryMembership && (it.seniorMembership || it.studentMembership) || (it.seniorMembership && it.studentMembership)) {
-                errorService.createError(
+                errorService.createMemberError(
                         member.key,
                         "Kunde har flere av 'PM', 'PM70+' og 'Student' på rad med type ${it.type}"
                 )
@@ -121,7 +121,7 @@ class CrmReportService(
 
             // A company should only have "Polyteknisk Forening" as type
             if (it.type != "Polyteknisk Forening") {
-                errorService.createError(
+                errorService.createMemberError(
                         member.key,
                         "Bedrift skal kun ha rad med type 'Polyteknisk Forening' - fant rad med type ${it.type}"
                 )
@@ -129,7 +129,7 @@ class CrmReportService(
 
             // A company should not have any "Membership Tiers" checked
             if (it.ordinaryMembership || it.seniorMembership || it.studentMembership) {
-                errorService.createError(
+                errorService.createMemberError(
                         member.key,
                         "Bedrift skal ikke ha 'PM', 'PM70+' eller 'Student' - fant på rad med type ${it.type}"
                 )

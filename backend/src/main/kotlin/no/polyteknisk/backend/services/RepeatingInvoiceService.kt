@@ -2,7 +2,10 @@ package no.polyteknisk.backend.services
 
 import no.polyteknisk.backend.entities.RepeatingInvoice
 import no.polyteknisk.backend.entities.RepeatingInvoiceDTO
+import no.polyteknisk.backend.entities.RepeatingInvoiceError
 import no.polyteknisk.backend.repositories.MemberRepository
+import no.polyteknisk.backend.repositories.RepeatingInvoiceErrorRepository
+import no.polyteknisk.backend.repositories.RepeatingInvoiceRepository
 import org.apache.tika.Tika
 import org.springframework.stereotype.Service
 import java.io.InputStream
@@ -10,31 +13,51 @@ import java.time.LocalDate
 
 @Service
 class RepeatingInvoiceService(
+        val repeatingInvoiceRepository: RepeatingInvoiceRepository,
+        val repeatingInvoiceErrorRepository: RepeatingInvoiceErrorRepository,
+        val memberService: MemberService,
         val memberRepository: MemberRepository
 ) {
 
-    fun parse(inputStream: InputStream) {
+    fun saveAll(invoices: List<RepeatingInvoice>) {
+        repeatingInvoiceRepository.saveAll(invoices)
+        memberService.validateInvoices()
+    }
+
+    fun parse(inputStream: InputStream): List<RepeatingInvoice> {
         val csvString = parseToString(inputStream)
         val dtos = convertToDTOs(csvString)
         val invoices = convertToInvoices(dtos)
-        println("BREAK")
+        return invoices
     }
 
     private fun convertToInvoices(dtos: List<RepeatingInvoiceDTO>): List<RepeatingInvoice> {
-        return dtos.map {
-            val member = memberRepository.findById(it.customerId).get()
-            val repeatingInvoice = RepeatingInvoice(
-                    id = it.invoiceId,
-                    member = member,
-                    productId = it.productId,
-                    productName = it.productName,
-                    price = it.price,
-                    dynamicPrice = it.dynamicPrice,
-                    frequency = it.frequency,
-                    nextDate = it.nextDate
-            )
-            repeatingInvoice
+
+        val invoices = mutableListOf<RepeatingInvoice>()
+        for (entity in dtos) {
+            val member = memberRepository.findById(entity.customerId)
+            if (member.isPresent) {
+                val repeatingInvoice = RepeatingInvoice(
+                        id = entity.invoiceId,
+                        member = member.get(),
+                        productId = entity.productId,
+                        productName = entity.productName,
+                        price = entity.price,
+                        dynamicPrice = entity.dynamicPrice,
+                        frequency = entity.frequency,
+                        nextDate = entity.nextDate
+                )
+                invoices.add(repeatingInvoice)
+            } else {
+                val error = RepeatingInvoiceError(
+                        memberId = entity.customerId,
+                        invoiceId = entity.invoiceId,
+                        errorMsg = "Medlem har repeterende faktura men ikke aktivt medlemskap - Produkt ID: " + entity.productId
+                )
+                repeatingInvoiceErrorRepository.save(error)
+            }
         }
+        return invoices
     }
 
     private fun parseToString(inputStream: InputStream): String {

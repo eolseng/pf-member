@@ -14,21 +14,49 @@ function MemberTable() {
     const seniorTierName = "Senior"
     const studentTierName = "Student"
 
-    const [members, setMembers] = useState([])
+    const [memberStats, setMemberStats] = useState([])
     useEffect(() => {
-        axios.get('/member')
+        axios.get('/stats/members')
             .then((response) => {
                 // Response also gives back "Bedrift"-type members
-                const members = response.data.filter(member => member.membershipType !== "Bedrift")
-                setMembers(members)
+                setMemberStats(response.data)
             })
     }, [])
 
-    if (members.length <= 0) {
+    function getMemberCount(type, tier, paying) {
+
+        if (!type && !tier) {
+            return memberStats.types.reduce((acc, type) => {
+                if (type.type === "Bedrift" || type.type === "ERROR") return acc
+                return acc + type.tiers.reduce((acc, tier) => {
+                    return acc + tier[paying]
+                }, 0)
+            }, 0)
+        } else if (!tier) {
+            return memberStats.types.find(e => e.type === type).tiers.reduce((acc, tier) => {
+                return acc + tier[paying]
+            }, 0)
+        } else if (!type) {
+            return memberStats.types.reduce((acc, type) => {
+                if (type.type === "Bedrift" || type.type === "ERROR") return acc
+                return acc + type.tiers.find(e => e.tier === tier)[paying]
+            }, 0)
+        } else {
+            return memberStats.types.find(e => e.type === type).tiers.find(e => e.tier === tier)[paying]
+        }
+
+    }
+
+    if (memberStats.length <= 0) {
         return "Loading members..."
     }
 
     return (
+
+        // <div>
+        //     {console.log(memberStats)}
+        //     {memberStats.types.find(e => e.type === pfTypeName).tiers.find(e => e.tier === ordinaryTierName).paying}
+        // </div>
         <table className="table table-striped table-bordered">
             <thead className="thead-dark">
             <tr>
@@ -62,117 +90,99 @@ function MemberTable() {
             <tr>
                 <th scope="row">Ordinær</th>
 
-                <td>{getMemberCount(members, pfTypeName, ordinaryTierName, false)}</td>
-                <td>{getMemberCount(members, pfTypeName, ordinaryTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, pfTypeName, ordinaryTierName, null)}</td>
+                <td>{getMemberCount(pfTypeName, ordinaryTierName, "paying")}</td>
+                <td>{getMemberCount(pfTypeName, ordinaryTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(pfTypeName, ordinaryTierName, "total")}</td>
 
-                <td>{getMemberCount(members, petTypeName, ordinaryTierName, false)}</td>
-                <td>{getMemberCount(members, petTypeName, ordinaryTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, petTypeName, ordinaryTierName, null)}</td>
+                <td>{getMemberCount(petTypeName, ordinaryTierName, "paying")}</td>
+                <td>{getMemberCount(petTypeName, ordinaryTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(petTypeName, ordinaryTierName, "total")}</td>
 
-                <td>{getMemberCount(members, teknaTypeName, ordinaryTierName, false)}</td>
-                <td>{getMemberCount(members, teknaTypeName, ordinaryTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, teknaTypeName, ordinaryTierName, null)}</td>
+                <td>{getMemberCount(teknaTypeName, ordinaryTierName, "paying")}</td>
+                <td>{getMemberCount(teknaTypeName, ordinaryTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(teknaTypeName, ordinaryTierName, "total")}</td>
 
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, ordinaryTierName, false)}</td>
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, ordinaryTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, bedriftsmedlemTypeName, ordinaryTierName, null)}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, ordinaryTierName, "paying")}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, ordinaryTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(bedriftsmedlemTypeName, ordinaryTierName, "total")}</td>
 
-                <td>{getMemberCount(members, null, ordinaryTierName, false)}</td>
-                <td>{getMemberCount(members, null, ordinaryTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, null, ordinaryTierName, null)}</td>
+                <td>{getMemberCount(null, ordinaryTierName, "paying")}</td>
+                <td>{getMemberCount(null, ordinaryTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(null, ordinaryTierName, "total")}</td>
             </tr>
             <tr>
                 <th scope="row">Senior</th>
 
-                <td>{getMemberCount(members, pfTypeName, seniorTierName, false)}</td>
-                <td>{getMemberCount(members, pfTypeName, seniorTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, pfTypeName, seniorTierName, null)}</td>
+                <td>{getMemberCount(pfTypeName, seniorTierName, "paying")}</td>
+                <td>{getMemberCount(pfTypeName, seniorTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(pfTypeName, seniorTierName, "total")}</td>
 
-                <td>{getMemberCount(members, petTypeName, seniorTierName, false)}</td>
-                <td>{getMemberCount(members, petTypeName, seniorTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, petTypeName, seniorTierName, null)}</td>
+                <td>{getMemberCount(petTypeName, seniorTierName, "paying")}</td>
+                <td>{getMemberCount(petTypeName, seniorTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(petTypeName, seniorTierName, "total")}</td>
 
-                <td>{getMemberCount(members, teknaTypeName, seniorTierName, false)}</td>
-                <td>{getMemberCount(members, teknaTypeName, seniorTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, teknaTypeName, seniorTierName, null)}</td>
+                <td>{getMemberCount(teknaTypeName, seniorTierName, "paying")}</td>
+                <td>{getMemberCount(teknaTypeName, seniorTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(teknaTypeName, seniorTierName, "total")}</td>
 
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, seniorTierName, false)}</td>
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, seniorTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, bedriftsmedlemTypeName, seniorTierName, null)}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, seniorTierName, "paying")}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, seniorTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(bedriftsmedlemTypeName, seniorTierName, "total")}</td>
 
-                <td>{getMemberCount(members, null, seniorTierName, false)}</td>
-                <td>{getMemberCount(members, null, seniorTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, null, seniorTierName, null)}</td>
+                <td>{getMemberCount(null, seniorTierName, "paying")}</td>
+                <td>{getMemberCount(null, seniorTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(null, seniorTierName, "total")}</td>
             </tr>
             <tr>
                 <th scope="row">Student</th>
 
-                <td>{getMemberCount(members, pfTypeName, studentTierName, false)}</td>
-                <td>{getMemberCount(members, pfTypeName, studentTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, pfTypeName, studentTierName, null)}</td>
+                <td>{getMemberCount(pfTypeName, studentTierName, "paying")}</td>
+                <td>{getMemberCount(pfTypeName, studentTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(pfTypeName, studentTierName, "total")}</td>
 
-                <td>{getMemberCount(members, petTypeName, studentTierName, false)}</td>
-                <td>{getMemberCount(members, petTypeName, studentTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, petTypeName, studentTierName, null)}</td>
+                <td>{getMemberCount(petTypeName, studentTierName, "paying")}</td>
+                <td>{getMemberCount(petTypeName, studentTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(petTypeName, studentTierName, "total")}</td>
 
-                <td>{getMemberCount(members, teknaTypeName, studentTierName, false)}</td>
-                <td>{getMemberCount(members, teknaTypeName, studentTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, teknaTypeName, studentTierName, null)}</td>
+                <td>{getMemberCount(teknaTypeName, studentTierName, "paying")}</td>
+                <td>{getMemberCount(teknaTypeName, studentTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(teknaTypeName, studentTierName, "total")}</td>
 
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, studentTierName, false)}</td>
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, studentTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, bedriftsmedlemTypeName, studentTierName, null)}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, studentTierName, "paying")}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, studentTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(bedriftsmedlemTypeName, studentTierName, "total")}</td>
 
-                <td>{getMemberCount(members, null, studentTierName, false)}</td>
-                <td>{getMemberCount(members, null, studentTierName, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, null, studentTierName, null)}</td>
+                <td>{getMemberCount(null, studentTierName, "paying")}</td>
+                <td>{getMemberCount(null, studentTierName, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(null, studentTierName, "total")}</td>
             </tr>
             <tr>
                 <th scope="row">Totalt</th>
 
-                <td>{getMemberCount(members, pfTypeName, null, false)}</td>
-                <td>{getMemberCount(members, pfTypeName, null, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, pfTypeName, null, null)}</td>
+                <td>{getMemberCount(pfTypeName, null, "paying")}</td>
+                <td>{getMemberCount(pfTypeName, null, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(pfTypeName, null, "total")}</td>
 
-                <td>{getMemberCount(members, petTypeName, null, false)}</td>
-                <td>{getMemberCount(members, petTypeName, null, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, petTypeName, null, null)}</td>
+                <td>{getMemberCount(petTypeName, null, "paying")}</td>
+                <td>{getMemberCount(petTypeName, null, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(petTypeName, null, "total")}</td>
 
-                <td>{getMemberCount(members, teknaTypeName, null, false)}</td>
-                <td>{getMemberCount(members, teknaTypeName, null, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, teknaTypeName, null, null)}</td>
+                <td>{getMemberCount(teknaTypeName, null, "paying")}</td>
+                <td>{getMemberCount(teknaTypeName, null, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(teknaTypeName, null, "total")}</td>
 
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, null, false)}</td>
-                <td>{getMemberCount(members, bedriftsmedlemTypeName, null, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, bedriftsmedlemTypeName, null, null)}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, null, "paying")}</td>
+                <td>{getMemberCount(bedriftsmedlemTypeName, null, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(bedriftsmedlemTypeName, null, "total")}</td>
 
-                <td>{getMemberCount(members, null, null, false)}</td>
-                <td>{getMemberCount(members, null, null, true)}</td>
-                <td style={{fontWeight: 'bold'}}>{getMemberCount(members, null, null, null)}</td>
+                <td>{getMemberCount(null, null, "paying")}</td>
+                <td>{getMemberCount(null, null, "free")}</td>
+                <td style={{fontWeight: 'bold'}}>{getMemberCount(null, null, "total")}</td>
             </tr>
             </tbody>
         </table>
     )
 }
 
-function getMemberCount(members, type, tier, free) {
-
-    if (type) {
-        members = members.filter(member => member.membershipType === type)
-    }
-    if (tier) {
-        members = members.filter(member => member.membershipTier === tier)
-    }
-
-    if (free === null) {
-    } else if (!free){
-        members = members.filter(member => member.freeMembership === free)
-    } else if (free) {
-        members = members.filter(member => member.freeMembership === free)
-    }
-
-    return members.length
-}
 
 export default MemberTable

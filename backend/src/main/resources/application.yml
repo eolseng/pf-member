@@ -7,8 +7,11 @@ spring:
     driver-class-name: org.h2.Driver
     username:
     password:
+  data:
+    rest:
+      base-path: /api
   jpa:
-    show-sql: false
+    show-sql: true
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect

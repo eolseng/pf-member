@@ -33,12 +33,16 @@ class RepeatingInvoiceService(
 
     private fun convertToInvoices(dtos: List<RepeatingInvoiceDTO>): List<RepeatingInvoice> {
 
+        val membershipProductIds = setOf(
+                3, 5, 12, 40, 41, 42, 20
+        )
+
         val invoices = mutableListOf<RepeatingInvoice>()
         for (entity in dtos) {
             val member = memberRepository.findById(entity.customerId)
             if (member.isPresent) {
                 val repeatingInvoice = RepeatingInvoice(
-                        id = entity.invoiceId,
+                        invoiceId = entity.invoiceId,
                         member = member.get(),
                         productId = entity.productId,
                         productName = entity.productName,
@@ -48,7 +52,7 @@ class RepeatingInvoiceService(
                         nextDate = entity.nextDate
                 )
                 invoices.add(repeatingInvoice)
-            } else {
+            } else if (membershipProductIds.contains(entity.productId)) {
                 val error = RepeatingInvoiceError(
                         memberId = entity.customerId,
                         invoiceId = entity.invoiceId,

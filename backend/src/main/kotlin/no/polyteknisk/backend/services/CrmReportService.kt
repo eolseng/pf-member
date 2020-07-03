@@ -13,25 +13,35 @@ class CrmReportService(
 ) {
 
     fun parse(inputStream: InputStream): List<Member> {
+        /*
+            Converts the input file to a XML String separated by '\t' for columns and '\n' for new lines
+         */
         val xmlString = parseToString(inputStream)
+        /*
+            Splits the string by the separators and converts each row into a CrmRowDTO
+        */
         val dtos = convertToDTOs(xmlString)
+        /*
+            Converts the CrmRowDTOs into Member objects.
+
+            1. Groups all the rows by the Member ID as a Map<Int (Member ID), List<CrmRowDTO>>
+            2. Checks all active rows (startDate <= today && endDate > today) for errors
+            3. Creates a Member Object based on membership rows ("Polyteknisk Forening" and "PF Petroleum og fornybar")
+
+         */
         return convertToMembers(dtos)
     }
 
     private fun convertToMembers(dtos: List<CrmRowDTO>): List<Member> {
-        // Filter out inactive rows
-        val today = LocalDate.now()
-        val activeRows = dtos.filter { it.endDate > today && it.startDate <= today }
 
         // Group rows by ID
-        val rowsById = activeRows.groupBy { it.id }
+        val rowsById = dtos.groupBy { it.id }
 
         // Create Member objects
         val members = mutableListOf<Member>()
         rowsById.forEach { member ->
-            checkForErrors(member)
-            val memberObject = constructMember(member)
-            memberObject?.let { members.add(it) }
+            checkCrmRowErrors(member)
+            constructMember(member)?.let { members.add(it) }
         }
         return members
     }
@@ -79,10 +89,10 @@ class CrmReportService(
                 }
     }
 
-    private fun checkForErrors(member: Map.Entry<Int, List<CrmRowDTO>>) {
+    private fun checkCrmRowErrors(member: Map.Entry<Int, List<CrmRowDTO>>) {
 
         /*
-            ERROR REPORTING:
+            ERROR REPORTING - Only for active rows in membership
             - A member must have 'Polyteknisk Forening' or 'PF Petroleum og fornybar'
             - A member should not have both 'Polyteknisk Forening' and 'PF Petroleum og fornybar'
             - A member should not have multiple "Membership Tiers" checked
@@ -90,112 +100,135 @@ class CrmReportService(
             - A company should not have any "Membership Tiers" checked
         */
 
-        // A member must have 'Polyteknisk Forening' or 'PF Petroleum og fornybar'
-        if (!member.value.any { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }) {
-            errorService.createMemberError(
-                    member.key,
-                    "Kunde har ikke 'Polyteknisk Forening' eller 'PF Petroleum og fornybar'"
-            )
-        }
+        val today = LocalDate.now()
 
-        // A member should not have both 'Polyteknisk Forening' and 'PF Petroleum og fornybar'
-        if (member.value.filter { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }.size > 1) {
-            errorService.createMemberError(
-                    member.key,
-                    "Kunde har både 'Polyteknisk Forening' og 'PF Petroleum og fornybar'"
-            )
-        }
+        val activeRows = member.value.filter { it.endDate > today && it.startDate <= today }
 
-        // A member should not have multiple "Membership Tiers" checked
-        member.value.forEach {
-            if (it.ordinaryMembership && (it.seniorMembership || it.studentMembership) || (it.seniorMembership && it.studentMembership)) {
+        if (activeRows.isNotEmpty()) {
+
+            // A member must have 'Polyteknisk Forening' or 'PF Petroleum og fornybar'
+            if (!activeRows.any { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }) {
                 errorService.createMemberError(
                         member.key,
-                        "Kunde har flere av 'PM', 'PM70+' og 'Student' på rad med type ${it.type}"
-                )
-            }
-        }
-
-        // Checks for 'Company' rows
-        member.value.filter { it.customerType == "Company" }.forEach {
-
-            // A company should only have "Polyteknisk Forening" as type
-            if (it.type != "Polyteknisk Forening") {
-                errorService.createMemberError(
-                        member.key,
-                        "Bedrift skal kun ha rad med type 'Polyteknisk Forening' - fant rad med type ${it.type}"
+                        "Kunde har ikke 'Polyteknisk Forening' eller 'PF Petroleum og fornybar'"
                 )
             }
 
-            // A company should not have any "Membership Tiers" checked
-            if (it.ordinaryMembership || it.seniorMembership || it.studentMembership) {
+            // A member should not have both 'Polyteknisk Forening' and 'PF Petroleum og fornybar'
+            if (activeRows.filter { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }.size > 1) {
                 errorService.createMemberError(
                         member.key,
-                        "Bedrift skal ikke ha 'PM', 'PM70+' eller 'Student' - fant på rad med type ${it.type}"
+                        "Kunde har både 'Polyteknisk Forening' og 'PF Petroleum og fornybar'"
                 )
+            }
+
+            // A member should not have multiple "Membership Tiers" checked
+            activeRows.forEach {
+                if (it.ordinaryMembership && (it.seniorMembership || it.studentMembership) || (it.seniorMembership && it.studentMembership)) {
+                    errorService.createMemberError(
+                            member.key,
+                            "Kunde har flere av 'PM', 'PM70+' og 'Student' på rad med type ${it.type}"
+                    )
+                }
+            }
+
+            // Checks for 'Company' rows
+            activeRows.filter { it.customerType == "Company" }.forEach {
+
+                // A company should only have "Polyteknisk Forening" as type
+                if (it.type != "Polyteknisk Forening") {
+                    errorService.createMemberError(
+                            member.key,
+                            "Bedrift skal kun ha rad med type 'Polyteknisk Forening' - fant rad med type ${it.type}"
+                    )
+                }
+
+                // A company should not have any "Membership Tiers" checked
+                if (it.ordinaryMembership || it.seniorMembership || it.studentMembership) {
+                    errorService.createMemberError(
+                            member.key,
+                            "Bedrift skal ikke ha 'PM', 'PM70+' eller 'Student' - fant på rad med type ${it.type}"
+                    )
+                }
             }
         }
     }
 
     private fun constructMember(member: Map.Entry<Int, List<CrmRowDTO>>): Member? {
-        val membershipType = getMembershipType(member)
-        val membershipTier = getMembershipTier(member)
-        val tekniskUkeblad = member.value.any { row -> row.type == "Teknisk Ukeblad" }
-        return member.value
-                .find { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }
-                ?.let {
-                    Member(
-                            id = it.id,
-                            lastName = it.lastName,
-                            firstName = it.firstName,
-                            email = it.email,
-                            address = it.address,
-                            postalCode = it.postalCode,
-                            areaCode = it.areaCode,
-                            birthDate = it.birthDate,
-                            customerType = it.customerType,
-                            membershipTier = membershipTier,
-                            membershipType = membershipType,
-                            freeMembership = it.freeMembership,
-                            tekniskUkeblad = tekniskUkeblad
-                    )
-                }
-    }
 
-    private fun getMembershipTier(member: Map.Entry<Int, List<CrmRowDTO>>): Member.MembershipTier {
+        val today = LocalDate.now()
 
-        val rows = member.value
+        val membershipRows = member.value
+                .filter { it.type == "Polyteknisk Forening" || it.type == "PF Petroleum og fornybar" }
+                .sortedBy { it.endDate }
 
-        return when {
-            rows.any { it.studentMembership } -> Member.MembershipTier.Student
-            rows.any { it.seniorMembership } -> Member.MembershipTier.Senior
-            rows.any { it.ordinaryMembership } -> Member.MembershipTier.Ordinary
-            rows.any { it.customerType == "Company" } -> Member.MembershipTier.Bedrift
-            else -> Member.MembershipTier.ERROR
+//        val mainRow = membershipRows.maxBy { it.endDate }
+        val mainRow = if (membershipRows.any {it.endDate > today}) {
+            membershipRows.first { it.endDate > today }
+        } else {
+            membershipRows.maxBy { it.endDate }
+        }
+
+        val tekniskUkeblad = member.value.any { it.type == "Teknisk Ukeblad" && it.endDate > today }
+
+        return mainRow?.let {
+
+            val membershipStatus = getMembershipStatus(it)
+            val membershipType = getMembershipType(it)
+            val membershipTier = getMembershipTier(it)
+
+            Member(
+                    id = it.id,
+                    lastName = it.lastName,
+                    firstName = it.firstName,
+                    email = it.email,
+                    address = it.address,
+                    postalCode = it.postalCode,
+                    areaCode = it.areaCode,
+                    birthDate = it.birthDate,
+                    customerType = it.customerType,
+                    startDate = it.startDate,
+                    endDate = it.endDate,
+                    membershipStatus = membershipStatus,
+                    membershipTier = membershipTier,
+                    membershipType = membershipType,
+                    freeMembership = it.freeMembership,
+                    tekniskUkeblad = tekniskUkeblad
+            )
         }
     }
 
-    private fun getMembershipType(member: Map.Entry<Int, List<CrmRowDTO>>): Member.MembershipType {
+    private fun getMembershipStatus(row: CrmRowDTO): Member.MembershipStatus {
 
-        val rows = member.value
+        val today = LocalDate.now()
 
         return when {
-            rows.any { it.customerType == "Company" } -> {
-                Member.MembershipType.Bedrift
-            }
-            rows.any { it.businessMembership } -> {
-                Member.MembershipType.Bedriftsmedlem
-            }
-            rows.any { it.teknaMembership } -> {
-                Member.MembershipType.Tekna
-            }
-            rows.any { it.type == "PF Petroleum og fornybar" } -> {
-                Member.MembershipType.PFPetroleumOgFornybar
-            }
-            rows.any { it.type == "Polyteknisk Forening" } -> {
-                Member.MembershipType.PolytekniskForening
-            }
+            row.startDate > today -> Member.MembershipStatus.Scheduled
+            row.endDate > today -> Member.MembershipStatus.Active
+            row.endDate <= today -> Member.MembershipStatus.Deactivated
+            else -> Member.MembershipStatus.ERROR
+        }
+    }
+
+    private fun getMembershipType(row: CrmRowDTO): Member.MembershipType {
+        return when {
+            row.customerType == "Company" -> Member.MembershipType.Bedrift
+            row.businessMembership -> Member.MembershipType.Bedriftsmedlem
+            row.teknaMembership -> Member.MembershipType.Tekna
+            row.type == "PF Petroleum og fornybar" -> Member.MembershipType.PFPetroleumOgFornybar
+            row.type == "Polyteknisk Forening" -> Member.MembershipType.PolytekniskForening
             else -> Member.MembershipType.ERROR
+        }
+    }
+
+
+    private fun getMembershipTier(row: CrmRowDTO): Member.MembershipTier {
+        return when {
+            row.studentMembership -> Member.MembershipTier.Student
+            row.seniorMembership -> Member.MembershipTier.Senior
+            row.ordinaryMembership -> Member.MembershipTier.Ordinary
+            row.customerType == "Company" -> Member.MembershipTier.Bedrift
+            else -> Member.MembershipTier.ERROR
         }
     }
 

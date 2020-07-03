@@ -26,7 +26,9 @@ class DownloadFileController(
     @GetMapping("/tu")
     fun exportTu(response: HttpServletResponse) {
 
-        val members = memberRepository.findAllByTekniskUkeblad(true)
+        val members = memberRepository.findAllByMembershipStatusAndTekniskUkeblad(
+                status = Member.MembershipStatus.Active,
+                tekniskUkeblad = true)
         val filename: String = createDatedFilename("TU Medlemskap.xlsx")
 
         response.contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

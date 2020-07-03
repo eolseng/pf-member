@@ -1,6 +1,7 @@
 package no.polyteknisk.backend.entities
 
 import org.springframework.data.rest.core.config.Projection
+import java.time.LocalDate
 import javax.persistence.*
 
 @Entity(name = "Member")
@@ -16,6 +17,9 @@ class Member(
         val areaCode: String,
         val birthDate: String,
         val customerType: String,
+        val startDate: LocalDate,
+        val endDate: LocalDate,
+        val membershipStatus: MembershipStatus,
         val membershipType: MembershipType,
         val membershipTier: MembershipTier,
         val freeMembership: Boolean,
@@ -29,6 +33,13 @@ class Member(
             orphanRemoval = true
     )
     val repeatingInvoices = mutableListOf<RepeatingInvoice>()
+
+    enum class MembershipStatus {
+        Deactivated,
+        Active,
+        Scheduled,
+        ERROR
+    }
 
     enum class MembershipType {
         PolytekniskForening,

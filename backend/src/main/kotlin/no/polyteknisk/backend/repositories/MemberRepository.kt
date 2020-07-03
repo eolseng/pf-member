@@ -16,10 +16,10 @@ interface MemberRepository : JpaRepository<Member, Int> {
     @Transactional
     fun deleteAllMembers()
 
-    fun findAllByTekniskUkeblad(boolean: Boolean): List<Member>
+    fun findAllByMembershipStatusAndTekniskUkeblad(status: Member.MembershipStatus, tekniskUkeblad: Boolean): List<Member>
 
-    fun countAllByMembershipTypeAndMembershipTier(type: Member.MembershipType, tier: Member.MembershipTier): Int
+    fun countAllByMembershipStatusAndMembershipTypeAndMembershipTier(status: Member.MembershipStatus, type: Member.MembershipType, tier: Member.MembershipTier): Int
 
-    fun countAllByMembershipTypeAndMembershipTierAndFreeMembership(type: Member.MembershipType, tier: Member.MembershipTier, free: Boolean): Int
+    fun countAllByMembershipStatusAndMembershipTypeAndMembershipTierAndFreeMembership(status: Member.MembershipStatus, type: Member.MembershipType, tier: Member.MembershipTier, free: Boolean): Int
 
 }

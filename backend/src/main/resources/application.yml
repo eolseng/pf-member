@@ -11,7 +11,7 @@ spring:
     rest:
       base-path: /api
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect

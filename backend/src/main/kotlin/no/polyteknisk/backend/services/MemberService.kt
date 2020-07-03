@@ -34,17 +34,20 @@ class MemberService(
 
         val types = MembershipType.values().map { type ->
             val tiers = MembershipTier.values().map { tier ->
-                val paying = repository.countAllByMembershipTypeAndMembershipTierAndFreeMembership(
+                val paying = repository.countAllByMembershipStatusAndMembershipTypeAndMembershipTierAndFreeMembership(
+                        status = Member.MembershipStatus.Active,
                         type = type,
                         tier = tier,
                         free = false
                 )
-                val free = repository.countAllByMembershipTypeAndMembershipTierAndFreeMembership(
+                val free = repository.countAllByMembershipStatusAndMembershipTypeAndMembershipTierAndFreeMembership(
+                        status = Member.MembershipStatus.Active,
                         type = type,
                         tier = tier,
                         free = true
                 )
-                val total = repository.countAllByMembershipTypeAndMembershipTier(
+                val total = repository.countAllByMembershipStatusAndMembershipTypeAndMembershipTier(
+                        status = Member.MembershipStatus.Active,
                         type = type,
                         tier = tier
                 )
@@ -127,6 +130,9 @@ class MemberService(
     }
 
     private fun validateCrm(member: Member) {
+
+        if (member.membershipStatus != Member.MembershipStatus.Active) return
+
         when (member.membershipType) {
             MembershipType.Bedrift -> validateBedrift(member)
             MembershipType.Bedriftsmedlem -> validateBedriftsmedlem(member)

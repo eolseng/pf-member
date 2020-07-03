@@ -7,7 +7,9 @@ import javax.persistence.*
 @Table(name = "repeating_invoice")
 class RepeatingInvoice (
         @Id
-        val id: String,
+        @GeneratedValue
+        val id: Int = 0,
+        val invoiceId: String,
         @ManyToOne(fetch = FetchType.LAZY)
         val member: Member,
         val productId: Int,

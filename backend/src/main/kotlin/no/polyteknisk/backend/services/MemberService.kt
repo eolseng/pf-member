@@ -88,10 +88,14 @@ class MemberService(
         )
 
         // Sjekker at kunde har repeterende fakturaer i henhold til tilpassede skjemaer
-        val members = repository.findAll().filter { !it.freeMembership }
+        val members = repository.findAll()
+                .filter { !it.freeMembership && it.membershipStatus == Member.MembershipStatus.Active }
         for (member in members) {
 
+            // List of all repeating invoices the member currently has
             val has = member.repeatingInvoices.map { it.productId }
+
+            // List of all repeating invoices the member should have
             val shouldHave = mutableListOf<Int>()
             if (member.membershipType == MembershipType.PolytekniskForening || member.membershipType == MembershipType.PFPetroleumOgFornybar) {
                 shouldHave.add(memberToProductMap[member.membershipType]!![member.membershipTier]!!)
@@ -100,6 +104,7 @@ class MemberService(
                 shouldHave.add(tekniskUkebladProductId)
             }
 
+            // Check if the member has any repeating invoices that he should not have. Creates errors for the ones he should not have
             val shouldNotHave = has.subtract(shouldHave)
             for (id in shouldNotHave) {
                 val invoice = member.repeatingInvoices.first { it.productId == id }
@@ -110,6 +115,7 @@ class MemberService(
                 )
             }
 
+            // Check if the member has all the repeating invoices he should have. Creates errors for the ones missing
             val missing = shouldHave.subtract(has)
             for (id in missing) {
                 if (id == tekniskUkebladProductId) {

@@ -4,32 +4,33 @@ import no.polyteknisk.backend.services.UserService
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
 
+const val ENV_VARIABLE_ADMIN_USERNAME = "AUTH_ADMIN_USERNAME"
+const val ENV_VARIABLE_ADMIN_PASSWORD = "AUTH_ADMIN_PASSWORD"
+
+const val DEFAULT_ADMIN_USERNAME = "admin"
+const val DEFAULT_ADMIN_PASSWORD = "admin"
+
 @Component
-class DataInitializer(
+class UserInitializer(
         private val userService: UserService
-) : CommandLineRunner{
+) : CommandLineRunner {
 
     override fun run(vararg args: String?) {
         createAdminUser()
     }
 
     private fun createAdminUser() {
-        val username = getAdminUsernameOrDefault()
-        val password = getDefaultAdminPasswordOrDefault()
-        val roles = setOf("USER", "ADMIN")
-        userService.createUser(username, password, roles)
+        val username = getEnvVariableOrDefault(
+                envVariable = ENV_VARIABLE_ADMIN_USERNAME,
+                default = DEFAULT_ADMIN_USERNAME)
+        val password = getEnvVariableOrDefault(
+                envVariable =  ENV_VARIABLE_ADMIN_PASSWORD,
+                default =  DEFAULT_ADMIN_PASSWORD)
+        userService.createUser(username, password, setOf("USER", "ADMIN"))
     }
 
-    private fun getDefaultAdminPasswordOrDefault(): String {
-        val adminPasswordEnvVariable = "ADMIN_PASSWORD"
-        val defaultAdminPassword = "admin"
-        return (System.getenv(adminPasswordEnvVariable) ?: defaultAdminPassword).trim()
-    }
-
-    private fun getAdminUsernameOrDefault(): String {
-        val adminUsernameEnvVariable = "ADMIN_USERNAME"
-        val defaultAdminUsername = "admin"
-        return (System.getenv(adminUsernameEnvVariable) ?: defaultAdminUsername).trim()
+    private fun getEnvVariableOrDefault(envVariable: String, default: String): String {
+        return (System.getenv(envVariable) ?: default).trim()
     }
 
 }
